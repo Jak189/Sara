@@ -1,46 +1,47 @@
 import os
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 import google.generativeai as genai
+from flask import Flask
+from threading import Thread
 
-# Render Health Check
-class HealthCheck(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is online")
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-def run_server():
-    port = int(os.environ.get("PORT", 8080))
-    HTTPServer(('0.0.0.0', port), HealthCheck).serve_forever()
+# --------- KEYS ----------
+BOT_TOKEN = os.getenv("8604780681:AAH4tnRnMAk-gahwahZfsxMIe0oQcQNKqII")
+GEMINI_API_KEY = os.getenv("AIzaSyB_2QVb9rSbS9SUQm-vHf5g4usf3lq5Pwo")
 
-# መረጃዎች
-TOKEN = "8604780681:AAH4tnRnMAk-gahwahZfsxMIe0oQcQNKqII"
-API_KEY = "AIzaSyB_2QVb9rSbS9SUQm-vHf5g4usf3lq5Pwo"
+# --------- GEMINI ----------
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-pro")
 
-genai.configure(api_key=API_KEY)
+# --------- AI CHAT ----------
+async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_text = update.message.text
 
-# እዚህ ጋር ስሙን 'gemini-1.5-flash' ወይም 'gemini-1.5-pro' አድርገህ ሞክረው
-model = genai.GenerativeModel('gemini-1.5-flash')
+    response = model.generate_content(user_text)
+    reply = response.text
 
-async def start(update, context):
-    await update.message.reply_text("ሰላም! አሁን በትክክል ተስተካክሏል። መጠየቅ ትችላለህ።")
+    await update.message.reply_text(reply)
 
-async def chat(update, context):
-    try:
-        user_input = update.message.text
-        # የመልስ አሰጣጥ ዘዴውን ማስተካከያ
-        response = model.generate_content(user_input)
-        await update.message.reply_text(response.text)
-    except Exception as e:
-        # ስህተቱ ከቀጠለ በትክክል ምን እንደሆነ ያሳየናል
-        await update.message.reply_text(f"⚠️ ስህተት፡ {str(e)}")
+# --------- TELEGRAM ----------
+bot = ApplicationBuilder().token(BOT_TOKEN).build()
+bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
-if __name__ == '__main__':
-    threading.Thread(target=run_server, daemon=True).start()
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler('start', start))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), chat))
-    app.run_polling()
+# --------- FLASK (UPTIME) ----------
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "AI Bot Running!"
+
+def run():
+    app.run(host="0.0.0.0", port=10000)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# --------- START ----------
+keep_alive()
+print("AI Bot Started...")
+bot.run_polling()
