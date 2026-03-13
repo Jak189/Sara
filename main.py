@@ -1,32 +1,46 @@
+import os
+import asyncio
 import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
 import google.generativeai as genai
 
-# መረጃዎች
-TOKEN = "8604780681:AAH4tnRnMAk-gahwahZfsxMIe0oQcQNKqII"
-API_KEY = "AIzaSyB_2QVb9rSbS9SUQm-vHf5g4usf3lq5Pwo"
-
-# AI ቅንብር
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
-
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 
-async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user_input = update.message.text
-        # ለተጠቃሚው መልስ ማመንጨት
-        response = model.generate_content(user_input)
-        await update.message.reply_text(response.text)
-    except Exception as e:
-        # ስህተት ካለ እዚህ ጋር ይነግረናል
-        await update.message.reply_text(f"⚠️ ስህተት፡ {str(e)}")
+# API Keys
+TELEGRAM_TOKEN = "8604780681:AAH0H8zQBWUd_iz_M9Mpdg5Fr9ftvqIiMHk"
+GEMINI_KEY = "AIzaSyB_2QVb9rSbS9SUQm-vHf5g4usf3lq5Pwo"
 
-if __name__ == '__main__':
-    # ቦቱን በቀጥታ ማስነሳት (ያለ Flask)
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), chat))
-    
-    print("ቦቱ እየሰራ ነው...")
-    app.run_polling()
+# Gemini Setup
+genai.configure(api_key=GEMINI_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+bot = Bot(token=TELEGRAM_TOKEN)
+dp = Dispatcher()
+
+@dp.message(Command("start"))
+async def start_handler(message: types.Message):
+    await message.answer("ሰላም! እኔ በ AI የታገዝኩ ቦት ነኝ። ምን ላግዝህ?")
+
+@dp.message()
+async def chat_handler(message: types.Message):
+    if not message.text:
+        return
+    try:
+        # ለ Gemini መልዕክቱን መላክ
+        response = model.generate_content(message.text)
+        await message.answer(response.text)
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        await message.answer("ይቅርታ፣ አሁን ላይ ምላሽ መስጠት አልቻልኩም። ቆይተው ይሞክሩ።")
+
+async def main():
+    logging.info("ቦቱ ሥራ ጀምሯል...")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("ቦቱ ቆሟል!")
