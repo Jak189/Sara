@@ -5,20 +5,21 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
 
-BOT_TOKEN = os.getenv("8604780681:AAH4tnRnMAk-gahwahZfsxMIe0oQcQNKqII")
-GEMINI_API_KEY = os.getenv("AIzaSyB_2QVb9rSbS9SUQm-vHf5g4usf3lq5Pwo")
+# በቀጥታ Token እና Key እዚህ ጋር እናስገባለን
+BOT_TOKEN = "8604780681:AAH4tnRnMAk-gahwahZfsxMIe0oQcQNKqII"
+GEMINI_API_KEY = "AIzaSyB_2QVb9rSbS9SUQm-vHf5g4usf3lq5Pwo"
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-pro")
+# ሞዴሉን ወደ አዲሱ 'gemini-1.5-flash' ብንቀይረው ፈጣን ነው
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-    response = model.generate_content(user_text)
-    reply = response.text
-    await update.message.reply_text(reply)
-
-bot = ApplicationBuilder().token(BOT_TOKEN).build()
-bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    try:
+        user_text = update.message.text
+        response = model.generate_content(user_text)
+        await update.message.reply_text(response.text)
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ ስህተት፡ {str(e)}")
 
 app = Flask('')
 
@@ -27,12 +28,18 @@ def home():
     return "AI Bot Running!"
 
 def run():
-    app.run(host="0.0.0.0", port=10000)
+    # Render የሚጠቀመው ፖርት 10000 ወይም ከ Environment Variable የሚመጣ ነው
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
-keep_alive()
-print("AI Bot Started...")
-bot.run_polling()
+if __name__ == '__main__':
+    keep_alive()
+    print("AI Bot Started...")
+    # ቦቱን እናስጀምራለን
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    application.run_polling()
