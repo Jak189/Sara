@@ -11,7 +11,7 @@ import google.generativeai as genai
 logging.basicConfig(level=logging.INFO)
 
 # API Keys
-TELEGRAM_TOKEN = "8604780681:AAH0H8zQBWUd_iz_M9Mpdg5Fr9ftvqIiMHk"
+TELEGRAM_TOKEN = "8604780681:AAEyCgLko_0KsZOgEi3k16Xb1MJFPv0ik5U"
 GEMINI_KEY = "AIzaSyB_2QVb9rSbS9SUQm-vHf5g4usf3lq5Pwo"
 
 # Gemini Setup
